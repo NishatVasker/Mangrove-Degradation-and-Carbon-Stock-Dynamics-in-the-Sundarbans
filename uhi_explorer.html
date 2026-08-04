@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thermal Bench — UHI data explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --base:#EDF1EF; --surface:#FFFFFF; --ink:#101E1B; --ink2:#5B6E69;
+  --ink3:#8A9995; --rule:#CFDAD6; --rule2:#E3EAE7;
+  --accent:#0E5A4E; --accent-soft:#DCEAE6;
+  --warm:#C1442E; --cool:#2C5F8A; --amber:#C98A12; --good:#2E7D5B;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --serif:"IBM Plex Serif",Georgia,serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--base); color:var(--ink); font-family:var(--sans);
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 96px}
+
+/* ---------- masthead ---------- */
+header{border-bottom:1px solid var(--rule);background:var(--surface)}
+.mast{max-width:1120px;margin:0 auto;padding:22px 24px 0;
+  display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}
+.title{font-family:var(--serif);font-size:26px;font-weight:600;letter-spacing:-.015em;margin:0}
+.sub{font-family:var(--mono);font-size:11px;color:var(--ink2);
+  text-transform:uppercase;letter-spacing:.13em;margin:5px 0 0}
+.state{font-family:var(--mono);font-size:11.5px;color:var(--ink2);text-align:right;
+  padding-top:6px;letter-spacing:.02em}
+.state b{color:var(--ink);font-weight:600}
+
+/* ---------- signature: calibration strip ---------- */
+.calib{max-width:1120px;margin:18px auto 0;padding:0 24px 18px}
+.calib-label{display:flex;justify-content:space-between;font-family:var(--mono);
+  font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px}
+#strip{width:100%;height:52px;display:block;background:#DDE4E1;border:1px solid var(--rule)}
+.calib-ticks{display:flex;justify-content:space-between;font-family:var(--mono);
+  font-size:10.5px;color:var(--ink2);margin-top:5px}
+
+/* ---------- sections ---------- */
+section{margin-top:44px}
+.sec-head{display:flex;align-items:baseline;gap:12px;
+  border-bottom:1px solid var(--rule);padding-bottom:8px;margin-bottom:20px}
+.sec-num{font-family:var(--mono);font-size:11px;color:var(--accent);
+  letter-spacing:.1em;font-weight:600}
+h2{font-family:var(--serif);font-size:19px;font-weight:600;margin:0;letter-spacing:-.01em}
+.sec-note{font-size:13px;color:var(--ink2);margin:-10px 0 18px;max-width:66ch}
+
+/* ---------- drop zone ---------- */
+.drop{background:var(--surface);border:1.5px dashed var(--rule);
+  padding:38px 28px;text-align:center;transition:border-color .15s,background .15s}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop h3{font-family:var(--serif);font-size:17px;margin:0 0 6px;font-weight:600}
+.drop p{color:var(--ink2);font-size:13.5px;margin:0 0 18px}
+.btn{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+  background:var(--accent);color:#fff;border:0;padding:11px 20px;cursor:pointer;
+  transition:opacity .15s}
+.btn:hover{opacity:.86}
+.btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--rule)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.filerow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:4px}
+
+/* ---------- cards & grid ---------- */
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--surface);border:1px solid var(--rule);padding:16px 18px}
+.card h4{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.11em;color:var(--ink2);margin:0 0 9px;font-weight:500}
+.stat{font-family:var(--mono);font-size:25px;font-weight:500;letter-spacing:-.02em;line-height:1.1}
+.stat small{font-size:13px;color:var(--ink2);font-weight:400}
+.hint{font-size:12px;color:var(--ink2);margin-top:7px;line-height:1.45}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--ink2);text-align:left;font-weight:500;
+  border-bottom:1px solid var(--rule);padding:7px 10px 7px 0}
+td{padding:7px 10px 7px 0;border-bottom:1px solid var(--rule2);
+  font-variant-numeric:tabular-nums}
+td.num,th.num{text-align:right;font-family:var(--mono);font-size:12.5px}
+tr:last-child td{border-bottom:0}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;padding:2px 7px;
+  text-transform:uppercase;display:inline-block}
+.t-warm{background:#FBE6E1;color:#8C2F1D}
+.t-cool{background:#E1EBF4;color:#1E4666}
+.t-ok{background:#E0F0E8;color:#1F5D44}
+.t-warn{background:#FAEEDA;color:#84590A}
+
+/* ---------- misc ---------- */
+.mono{font-family:var(--mono)}
+.bar-track{height:6px;background:var(--rule2);position:relative;margin-top:5px}
+.bar-fill{height:6px;background:var(--accent);position:absolute;left:0;top:0}
+.callout{border-left:2.5px solid var(--accent);background:var(--surface);
+  padding:14px 18px;font-size:13.5px;color:var(--ink2)}
+.callout b{color:var(--ink)}
+.callout.warn{border-left-color:var(--amber)}
+.callout.bad{border-left-color:var(--warm)}
+svg{display:block;max-width:100%}
+.axis{font-family:var(--mono);font-size:10px;fill:var(--ink3)}
+.hidden{display:none}
+.spinner{display:inline-block;width:11px;height:11px;border:2px solid var(--rule);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;
+  vertical-align:-1px;margin-right:7px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;
+  color:var(--ink2);margin-top:9px}
+.swatch{width:10px;height:10px;display:inline-block;margin-right:5px;vertical-align:-1px}
+select,input[type=number]{font-family:var(--mono);font-size:12px;padding:6px 8px;
+  border:1px solid var(--rule);background:var(--surface);color:var(--ink)}
+label.ctl{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.09em;color:var(--ink2);display:block;margin-bottom:5px}
+.ctlrow{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px}
+footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:11px;color:var(--ink3);line-height:1.7}
+@media (max-width:820px){
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .title{font-size:22px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="mast">
+    <div>
+      <h1 class="title">Thermal Bench</h1>
+      <p class="sub">Urban heat island · data explorer</p>
+    </div>
+    <div class="state" id="state">No file loaded<br><span style="color:var(--ink3)">Runs entirely in your browser</span></div>
+  </div>
+  <div class="calib">
+    <div class="calib-label"><span>Calibration strip — LST distribution</span><span id="stripN">awaiting data</span></div>
+    <svg id="strip" viewBox="0 0 1000 52" preserveAspectRatio="none"></svg>
+    <div class="calib-ticks" id="stripTicks"><span>—</span><span>—</span><span>—</span><span>—</span><span>—</span></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section id="s-load">
+  <div class="sec-head"><span class="sec-num">01</span><h2>Load data</h2></div>
+  <div class="drop" id="drop">
+    <h3>Drop a CSV here</h3>
+    <p>Spectral indices plus a land surface temperature column. Columns are detected automatically —<br>NDVI, NDBI, NDWI, albedo, coordinates, year, and LST in most common naming conventions.</p>
+    <div class="filerow">
+      <button class="btn" id="pick">Choose file</button>
+      <button class="btn ghost" id="demo">Load demo data</button>
+    </div>
+    <input type="file" id="file" accept=".csv,.txt,.tsv" class="hidden">
+  </div>
+  <div id="loadMsg"></div>
+</section>
+
+<div id="results" class="hidden">
+
+<section id="s-schema">
+  <div class="sec-head"><span class="sec-num">02</span><h2>What was detected</h2></div>
+  <p class="sec-note">Check this before trusting anything below. If the target or a predictor is mis-assigned, override it here and the analysis re-runs.</p>
+  <div class="ctlrow" id="overrides"></div>
+  <div class="grid g4" id="schemaCards"></div>
+  <div style="margin-top:16px" class="card"><h4>Columns</h4><div id="schemaTable"></div></div>
+</section>
+
+<section id="s-quality">
+  <div class="sec-head"><span class="sec-num">03</span><h2>Data quality</h2></div>
+  <p class="sec-note">Multicollinearity is structural here: spectral indices share bands by construction, so NDVI and SAVI carry nearly the same information. A variance inflation factor above 10 means a coefficient on that predictor is not interpretable on its own.</p>
+  <div class="grid g2">
+    <div class="card"><h4>Variance inflation</h4><div id="vifTable"></div></div>
+    <div class="card"><h4>Correlation with LST</h4><div id="corrChart"></div></div>
+  </div>
+</section>
+
+<section id="s-model">
+  <div class="sec-head"><span class="sec-num">04</span><h2>Model fit, honestly measured</h2></div>
+  <p class="sec-note">Two cross-validation designs run on the same model. Random folds let a test pixel sit metres from its training twin, which measures interpolation rather than generalisation. Spatial blocks withhold whole regions. The gap between them is how much of the apparent skill was really autocorrelation.</p>
+  <div class="grid g4" id="modelCards"></div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h4>Validation design</h4><div id="cvChart"></div></div>
+    <div class="card"><h4>Predicted against observed</h4><div id="fitChart"></div></div>
+  </div>
+  <div style="margin-top:16px" id="leakNote"></div>
+</section>
+
+<section id="s-drivers">
+  <div class="sec-head"><span class="sec-num">05</span><h2>What drives the heat</h2></div>
+  <p class="sec-note">Permutation importance: each predictor is shuffled in turn and the loss in accuracy recorded. Direction comes from the sign of its partial relationship with LST. This is model-agnostic and does not assume linearity.</p>
+  <div class="grid g2">
+    <div class="card"><h4>Permutation importance</h4><div id="impChart"></div></div>
+    <div class="card"><h4>Partial response</h4>
+      <label class="ctl" for="pdpSel" style="margin-bottom:8px">Predictor</label>
+      <select id="pdpSel"></select>
+      <div id="pdpChart" style="margin-top:10px"></div>
+    </div>
+  </div>
+</section>
+
+<section id="s-space">
+  <div class="sec-head"><span class="sec-num">06</span><h2>Where the heat is</h2></div>
+  <div class="grid g2">
+    <div class="card"><h4>Observed LST</h4><div id="mapChart"></div></div>
+    <div class="card"><h4>Cross-validation blocks</h4><div id="blockChart"></div></div>
+  </div>
+</section>
+
+<section id="s-zones">
+  <div class="sec-head"><span class="sec-num">07</span><h2>Climate zones found in the data</h2></div>
+  <p class="sec-note">Clusters derived from the predictor space rather than assigned by hand, then ranked by mean temperature. The signature names the two indices that most distinguish each cluster.</p>
+  <div class="card"><div id="lczTable"></div></div>
+</section>
+
+<section id="s-trend" class="hidden">
+  <div class="sec-head"><span class="sec-num">08</span><h2>Trend over time</h2></div>
+  <p class="sec-note">Mann–Kendall tests for monotonic change without assuming a distribution; Sen's slope estimates its magnitude robustly against outliers.</p>
+  <div class="grid g3" id="trendCards"></div>
+  <div class="card" style="margin-top:16px"><h4>Series</h4><div id="trendChart"></div></div>
+</section>
+
+</div><!-- /results -->
+
+<footer>
+  Thermal Bench · everything computed locally, nothing uploaded<br>
+  Gradient-boosted regression trees · spatial blocked cross-validation · permutation importance · Mann–Kendall / Sen<br>
+  For the full pipeline — SHAP attribution, conformal confidence gating, geographically weighted regression — run <span class="mono">uhi_pipeline.py</span>.
+</footer>
+
+</div>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   THERMAL BENCH — client-side analysis engine
+   No dependencies. No network. Everything below runs on the user's machine.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const $ = s => document.querySelector(s);
+const fmt = (v,d=3) => (v===null||v===undefined||!isFinite(v)) ? "—" : Number(v).toFixed(d);
+const RAMP = ["#2C5F8A","#5E93B8","#9DC4D6","#EFE3A0","#E8C547","#DA8B29","#C1442E"];
+
+function ramp(t){
+  t = Math.max(0, Math.min(1, t));
+  const x = t*(RAMP.length-1), i = Math.floor(x), f = x-i;
+  if(i>=RAMP.length-1) return RAMP[RAMP.length-1];
+  const a = RAMP[i].match(/\w\w/g).map(h=>parseInt(h,16));
+  const b = RAMP[i+1].match(/\w\w/g).map(h=>parseInt(h,16));
+  return "#"+a.map((v,k)=>Math.round(v+(b[k]-v)*f).toString(16).padStart(2,"0")).join("");
+}
+
+/* ── CSV ─────────────────────────────────────────────────────────────── */
+function parseCSV(text){
+  text = text.replace(/^\uFEFF/,"").replace(/\r\n?/g,"\n");
+  const delim = (text.split("\n")[0].match(/\t/g)||[]).length > 1 ? "\t" : ",";
+  const rows=[]; let row=[], cell="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; }
+      else cell+=c;
+    } else if(c==='"') q=true;
+    else if(c===delim){ row.push(cell); cell=""; }
+    else if(c==="\n"){ row.push(cell); rows.push(row); row=[]; cell=""; }
+    else cell+=c;
+  }
+  if(cell.length||row.length){ row.push(cell); rows.push(row); }
+  const head = rows.shift().map(h=>h.trim());
+  const data = rows.filter(r=>r.length>1 && r.some(v=>v.trim()!==""))
+                   .map(r=>{const o={}; head.forEach((h,i)=>o[h]=(r[i]??"").trim()); return o;});
+  return {columns:head, rows:data};
+}
+
+/* ── schema detection (mirrors the Python pipeline) ──────────────────── */
+const IDX_PAT = [
+  ["NDVI",/\bndvi\b|normali[sz]ed.*vegetation/],["NDBI",/\bndbi\b|normali[sz]ed.*built/],
+  ["MNDWI",/\bmndwi\b|modified.*water/],["NDWI",/\bndwi\b|normali[sz]ed.*water/],
+  ["NDBaI",/\bndbai\b|bare\s*soil\s*ind/],["SAVI",/\bsavi\b|soil.*adjusted/],
+  ["MSAVI",/\bmsavi\b/],["EVI",/\bevi\b|enhanced.*veg/],["IBI",/\bibi\b/],
+  ["BSI",/\bbsi\b|bare\s*soil/],["BUI",/\bbui\b|built.?up/],["UI",/\bui\b|urban\s*index/],
+  ["NBR",/\bnbr\b/],["ALBEDO",/albedo/],["EMISS",/emissiv|\bemis\b/],
+  ["FVC",/\bfvc\b|frac.*veg|veg.*frac/],["IMPERV",/imperv|\bisa\b/],
+  ["ELEV",/\belev\b|\bdem\b|altitude/],["SLOPE",/\bslope\b/],["NDMI",/\bndmi\b|moisture/],
+  ["LAI",/\blai\b/],["TCW",/\btcw\b/],["TCG",/\btcg\b/],["TCB",/\btcb\b/]
+];
+const P_LST=/\blst\b|land\s*surface\s*temp|surface\s*temp|\btemp\b|bright.*temp|\bts\b/;
+const P_LAT=/^lat\b|latitude|\by\s*coord|^point\s*y$|^y$|northing/;
+const P_LON=/^lon\b|^lng\b|longitude|\bx\s*coord|^point\s*x$|^x$|easting/;
+const P_YEAR=/^year$|^yr$|^date$|^epoch$/;
+const P_ID=/^id$|^fid$|^oid_?$|^objectid$|^index$|unnamed|system:index|^\.geo$/;
+const norm = c => String(c).toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+
+function detectSchema(cols, rows){
+  const s={lst:null,lat:null,lon:null,year:null,indices:{},other:[],dropped:[]};
+  const isNum = c => { let n=0,t=0; for(let i=0;i<Math.min(300,rows.length);i++){
+      const v=rows[i][c]; if(v==="")continue; t++; if(isFinite(parseFloat(v)))n++; }
+    return t>0 && n/t>0.85; };
+  const seen=new Set();
+  for(const c of cols){
+    const n=norm(c), raw=String(c).toLowerCase();
+    if(P_ID.test(n)||P_ID.test(raw)){s.dropped.push(c);continue;}
+    if(!s.year && P_YEAR.test(n)){s.year=c;continue;}
+    if(!s.lat && P_LAT.test(n)){s.lat=c;continue;}
+    if(!s.lon && P_LON.test(n)){s.lon=c;continue;}
+    let hit=null; for(const [k,re] of IDX_PAT) if(re.test(n)){hit=k;break;}
+    if(hit && !seen.has(hit)){ s.indices[hit]=c; seen.add(hit); continue; }
+    if(!s.lst && P_LST.test(n)){s.lst=c;continue;}
+    if(isNum(c)) s.other.push(c); else s.dropped.push(c);
+  }
+  if(!s.lst){                       // fallback: find a temperature-shaped column
+    for(const c of [...s.other]){
+      const v=rows.map(r=>parseFloat(r[c])).filter(isFinite);
+      if(v.length<10)continue;
+      const m=v.slice().sort((a,b)=>a-b)[Math.floor(v.length/2)];
+      if((m>=10&&m<=60)||(m>=270&&m<=340)){ s.lst=c; s.other=s.other.filter(x=>x!==c); break; }
+    }
+  }
+  return s;
+}
+
+/* ── numeric helpers ─────────────────────────────────────────────────── */
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+const sd=a=>{const m=mean(a);return Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/Math.max(1,a.length-1));};
+function quantile(sorted,q){const p=(sorted.length-1)*q,lo=Math.floor(p),hi=Math.ceil(p);
+  return lo===hi?sorted[lo]:sorted[lo]+(sorted[hi]-sorted[lo])*(p-lo);}
+function pearson(a,b){const ma=mean(a),mb=mean(b);let n=0,da=0,db=0;
+  for(let i=0;i<a.length;i++){const x=a[i]-ma,y=b[i]-mb;n+=x*y;da+=x*x;db+=y*y;}
+  return (da&&db)?n/Math.sqrt(da*db):0;}
+function zscore(col){const m=mean(col),s=sd(col)||1;return col.map(v=>(v-m)/s);}
+
+/* solve (X'X + lI) b = X'y by Gaussian elimination with partial pivoting */
+function ridgeSolve(X,y,lam){
+  const n=X.length,p=X[0].length,A=[],b=[];
+  for(let i=0;i<p;i++){A.push(new Float64Array(p+1));}
+  for(let i=0;i<p;i++){
+    for(let j=i;j<p;j++){let s=0;for(let k=0;k<n;k++)s+=X[k][i]*X[k][j];
+      A[i][j]=s+(i===j?lam:0); A[j][i]=A[i][j];}
+    let s=0;for(let k=0;k<n;k++)s+=X[k][i]*y[k]; A[i][p]=s;
+  }
+  for(let c=0;c<p;c++){
+    let piv=c;for(let r=c+1;r<p;r++)if(Math.abs(A[r][c])>Math.abs(A[piv][c]))piv=r;
+    [A[c],A[piv]]=[A[piv],A[c]];
+    if(Math.abs(A[c][c])<1e-12){A[c][c]=1e-12;}
+    for(let r=0;r<p;r++){ if(r===c)continue; const f=A[r][c]/A[c][c];
+      for(let k=c;k<=p;k++)A[r][k]-=f*A[c][k]; }
+  }
+  for(let i=0;i<p;i++)b.push(A[i][p]/A[i][i]);
+  return b;
+}
+function r2(y,yh){const m=mean(y);let ss=0,tt=0;
+  for(let i=0;i<y.length;i++){ss+=(y[i]-yh[i])**2;tt+=(y[i]-m)**2;}
+  return tt?1-ss/tt:0;}
+function rmse(y,yh){let s=0;for(let i=0;i<y.length;i++)s+=(y[i]-yh[i])**2;return Math.sqrt(s/y.length);}
+function mae(y,yh){let s=0;for(let i=0;i<y.length;i++)s+=Math.abs(y[i]-yh[i]);return s/y.length;}
+
+/* VIF: regress each predictor on the others */
+function vif(cols){
+  const p=cols.length, z=cols.map(zscore), n=z[0].length, out=[];
+  for(let j=0;j<p;j++){
+    const others=[...Array(p).keys()].filter(k=>k!==j);
+    if(!others.length){out.push(1);continue;}
+    const X=[];for(let i=0;i<n;i++)X.push(others.map(k=>z[k][i]));
+    const b=ridgeSolve(X,z[j],1e-6);
+    const pred=X.map(r=>r.reduce((s,v,k)=>s+v*b[k],0));
+    const R=Math.min(0.9999,Math.max(0,r2(z[j],pred)));
+    out.push(1/(1-R));
+  }
+  return out;
+}
+
+/* ── gradient boosted regression trees (histogram-based) ─────────────── */
+/* Cut points are computed ONCE per feature and values pre-binned, so each
+   node split is a single linear pass with bin accumulators. Re-sorting at
+   every node instead makes this roughly an order of magnitude slower.      */
+const NBINS = 24;
+
+function prepBins(X){
+  const n=X.length, p=X[0].length;
+  const cuts=[], binned=[];
+  for(let f=0;f<p;f++){
+    const v=new Float64Array(n);
+    for(let i=0;i<n;i++)v[i]=X[i][f];
+    const srt=Array.from(v).sort((a,b)=>a-b);
+    const c=[];
+    for(let q=1;q<NBINS;q++){
+      const x=quantile(srt,q/NBINS);
+      if(!c.length||x>c[c.length-1]) c.push(x);
+    }
+    cuts.push(c);
+  }
+  for(let i=0;i<n;i++){
+    const row=new Uint8Array(p);
+    for(let f=0;f<p;f++){
+      const c=cuts[f]; let lo=0,hi=c.length;
+      const x=X[i][f];
+      while(lo<hi){const mid=(lo+hi)>>1; if(x<=c[mid])hi=mid; else lo=mid+1;}
+      row[f]=lo;
+    }
+    binned.push(row);
+  }
+  return {cuts,binned};
+}
+
+function buildTreeBinned(B,g,idx,depth,minLeaf){
+  const p=B.cuts.length;
+  if(depth===0||idx.length<2*minLeaf){
+    let s=0; for(const i of idx)s+=g[i];
+    return {leaf:s/Math.max(1,idx.length)};
+  }
+  let best=null;
+  const sums=new Float64Array(NBINS), cnts=new Float64Array(NBINS);
+  for(let f=0;f<p;f++){
+    const nb=B.cuts[f].length+1;
+    sums.fill(0,0,nb); cnts.fill(0,0,nb);
+    for(const i of idx){const b=B.binned[i][f]; sums[b]+=g[i]; cnts[b]++;}
+    let ls=0,ln=0,ts=0,tn=0;
+    for(let b=0;b<nb;b++){ts+=sums[b];tn+=cnts[b];}
+    for(let b=0;b<nb-1;b++){
+      ls+=sums[b]; ln+=cnts[b];
+      const rs=ts-ls, rn=tn-ln;
+      if(ln<minLeaf||rn<minLeaf)continue;
+      const gain=(ls*ls)/ln+(rs*rs)/rn;
+      if(!best||gain>best.gain) best={gain,f,b};
+    }
+  }
+  if(!best){let s=0;for(const i of idx)s+=g[i];return {leaf:s/idx.length};}
+  const L=[],R=[];
+  for(const i of idx){ (B.binned[i][best.f]<=best.b?L:R).push(i); }
+  if(!L.length||!R.length){let s=0;for(const i of idx)s+=g[i];return {leaf:s/idx.length};}
+  return {f:best.f, c:B.cuts[best.f][best.b],
+          l:buildTreeBinned(B,g,L,depth-1,minLeaf),
+          r:buildTreeBinned(B,g,R,depth-1,minLeaf)};
+}
+
+const treePred=(t,x)=> t.leaf!==undefined ? t.leaf : treePred(x[t.f]<=t.c?t.l:t.r,x);
+
+function fitGBT(X,y,opt={}){
+  const nTrees=opt.nTrees??100, lr=opt.lr??0.10, depth=opt.depth??3,
+        minLeaf=opt.minLeaf??8, sub=opt.sub??0.75;
+  const n=X.length;
+  const B=prepBins(X);
+  const base=mean(y), trees=[];
+  const pred=new Float64Array(n).fill(base);
+  const g=new Float64Array(n);
+  let seed=12345; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  for(let t=0;t<nTrees;t++){
+    for(let i=0;i<n;i++)g[i]=y[i]-pred[i];
+    const idx=[];
+    for(let i=0;i<n;i++)if(rnd()<sub)idx.push(i);
+    if(idx.length<2*minLeaf)continue;
+    const tr=buildTreeBinned(B,g,idx,depth,minLeaf);
+    trees.push(tr);
+    for(let i=0;i<n;i++)pred[i]+=lr*treePred(tr,X[i]);
+  }
+  return {base,lr,trees,
+    predict(rows){
+      const out=new Float64Array(rows.length);
+      for(let i=0;i<rows.length;i++){
+        let v=this.base;
+        for(let t=0;t<this.trees.length;t++)v+=this.lr*treePred(this.trees[t],rows[i]);
+        out[i]=v;
+      }
+      return out;
+    }};
+}
+
+/* ── k-means ─────────────────────────────────────────────────────────── */
+function kmeans(X,k,iters=22){
+  const n=X.length,p=X[0].length;
+  let seed=99; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  const C=[]; const used=new Set();
+  while(C.length<k){const i=Math.floor(rnd()*n); if(!used.has(i)){used.add(i);C.push(X[i].slice());}}
+  let lab=new Int32Array(n);
+  for(let it=0;it<iters;it++){
+    for(let i=0;i<n;i++){
+      let bd=Infinity,bj=0;
+      for(let j=0;j<k;j++){let d=0;for(let q=0;q<p;q++)d+=(X[i][q]-C[j][q])**2;
+        if(d<bd){bd=d;bj=j;}}
+      lab[i]=bj;
+    }
+    const sums=Array.from({length:k},()=>new Float64Array(p)),cnt=new Int32Array(k);
+    for(let i=0;i<n;i++){cnt[lab[i]]++;for(let q=0;q<p;q++)sums[lab[i]][q]+=X[i][q];}
+    for(let j=0;j<k;j++) if(cnt[j]) for(let q=0;q<p;q++) C[j][q]=sums[j][q]/cnt[j];
+  }
+  return {labels:lab,centroids:C};
+}
+
+/* ── cross-validation ────────────────────────────────────────────────── */
+function foldsFromGroups(groups,k){
+  const uniq=[...new Set(groups)];
+  const map=new Map(uniq.map((g,i)=>[g,i%k]));
+  const out=Array.from({length:k},()=>({tr:[],te:[]}));
+  groups.forEach((g,i)=>{const f=map.get(g);
+    for(let j=0;j<k;j++) (j===f?out[j].te:out[j].tr).push(i);});
+  return out.filter(f=>f.te.length>5&&f.tr.length>20);
+}
+function randomFolds(n,k){
+  const idx=[...Array(n).keys()];
+  let seed=7; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  for(let i=n-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}
+  const out=Array.from({length:k},()=>({tr:[],te:[]}));
+  idx.forEach((v,i)=>{const f=i%k; for(let j=0;j<k;j++)(j===f?out[j].te:out[j].tr).push(v);});
+  return out;
+}
+function runCV(X,y,folds,opt){
+  const pred=new Float64Array(y.length).fill(NaN); const scores=[];
+  for(const f of folds){
+    const m=fitGBT(f.tr.map(i=>X[i]),f.tr.map(i=>y[i]),opt);
+    const p=m.predict(f.te.map(i=>X[i]));
+    f.te.forEach((i,k)=>pred[i]=p[k]);
+    scores.push(r2(f.te.map(i=>y[i]),p));
+  }
+  const ok=[...Array(y.length).keys()].filter(i=>isFinite(pred[i]));
+  return {pred,idx:ok,R2:r2(ok.map(i=>y[i]),ok.map(i=>pred[i])),
+          RMSE:rmse(ok.map(i=>y[i]),ok.map(i=>pred[i])),
+          MAE:mae(ok.map(i=>y[i]),ok.map(i=>pred[i])),
+          foldSD:sd(scores)};
+}
+
+/* Moran's I on a k-NN graph, computed on a capped subsample */
+function moransI(v,coords,k=8,cap=1200){
+  let idx=[...Array(v.length).keys()];
+  if(idx.length>cap){const st=Math.floor(idx.length/cap);idx=idx.filter((_,i)=>i%st===0).slice(0,cap);}
+  const n=idx.length; if(n<20)return NaN;
+  const vv=idx.map(i=>v[i]),cc=idx.map(i=>coords[i]);
+  const m=mean(vv); let num=0,den=0,W=0;
+  for(let i=0;i<n;i++){
+    const d=[];
+    for(let j=0;j<n;j++) if(i!==j) d.push([(cc[i][0]-cc[j][0])**2+(cc[i][1]-cc[j][1])**2,j]);
+    d.sort((a,b)=>a[0]-b[0]);
+    for(let q=0;q<Math.min(k,d.length);q++){num+=(vv[i]-m)*(vv[d[q][1]]-m);W++;}
+    den+=(vv[i]-m)**2;
+  }
+  return den&&W ? (n/W)*(num/den) : NaN;
+}
+
+/* ── permutation importance & partial dependence ─────────────────────── */
+function permImportance(model,X,y,names,reps=3){
+  const base=r2(y,model.predict(X));
+  let seed=4242; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  return names.map((nm,j)=>{
+    let drop=0;
+    for(let r=0;r<reps;r++){
+      const Xp=X.map(row=>row.slice());
+      const col=Xp.map(rw=>rw[j]);
+      for(let i=col.length-1;i>0;i--){const q=Math.floor(rnd()*(i+1));[col[i],col[q]]=[col[q],col[i]];}
+      Xp.forEach((rw,i)=>rw[j]=col[i]);
+      drop+=base-r2(y,model.predict(Xp));
+    }
+    const dir=pearson(X.map(r=>r[j]),y);
+    return {name:nm,importance:Math.max(0,drop/reps),dir:dir>=0?"warming":"cooling",corr:dir};
+  }).sort((a,b)=>b.importance-a.importance);
+}
+function partialDependence(model,X,j,steps=22,cap=400){
+  const sub=X.length>cap?X.filter((_,i)=>i%Math.ceil(X.length/cap)===0):X;
+  const vals=X.map(r=>r[j]).sort((a,b)=>a-b);
+  const lo=quantile(vals,0.03),hi=quantile(vals,0.97),out=[];
+  for(let s=0;s<steps;s++){
+    const v=lo+(hi-lo)*s/(steps-1);
+    const Xp=sub.map(r=>{const c=r.slice();c[j]=v;return c;});
+    out.push({x:v,y:mean(model.predict(Xp))});
+  }
+  return out;
+}
+
+/* ── Mann–Kendall & Sen's slope ──────────────────────────────────────── */
+function mannKendall(y){
+  const n=y.length; let S=0;
+  for(let i=0;i<n-1;i++)for(let j=i+1;j<n;j++)S+=Math.sign(y[j]-y[i]);
+  const varS=n*(n-1)*(2*n+5)/18;
+  const Z=S>0?(S-1)/Math.sqrt(varS):S<0?(S+1)/Math.sqrt(varS):0;
+  const p=2*(1-normCDF(Math.abs(Z)));
+  const tau=S/(0.5*n*(n-1));
+  return {S,Z,p,tau,trend:p<0.05?(S>0?"increasing":"decreasing"):"no trend"};
+}
+function sensSlope(x,y){
+  const s=[];
+  for(let i=0;i<y.length-1;i++)for(let j=i+1;j<y.length;j++)
+    if(x[j]!==x[i]) s.push((y[j]-y[i])/(x[j]-x[i]));
+  s.sort((a,b)=>a-b);
+  return s.length?quantile(s,0.5):NaN;
+}
+function normCDF(z){
+  const t=1/(1+0.2316419*Math.abs(z));
+  const d=0.3989423*Math.exp(-z*z/2);
+  const p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));
+  return z>0?1-p:p;
+}
+
+/* ═══ SVG CHARTS ═══════════════════════════════════════════════════════ */
+const SVGNS="http://www.w3.org/2000/svg";
+function svg(w,h){const s=document.createElementNS(SVGNS,"svg");
+  s.setAttribute("viewBox",`0 0 ${w} ${h}`);s.setAttribute("width","100%");return s;}
+function el(tag,attrs,txt){const e=document.createElementNS(SVGNS,tag);
+  for(const k in attrs)e.setAttribute(k,attrs[k]); if(txt!=null)e.textContent=txt; return e;}
+
+function barChart(host,items,opt={}){
+  host.innerHTML="";
+  const W=420,rowH=opt.rowH||22,pad={l:opt.l||86,r:46,t:8,b:24};
+  const H=pad.t+pad.b+items.length*rowH;
+  const s=svg(W,H);
+  const max=Math.max(...items.map(d=>Math.abs(d.value)),1e-9);
+  const x0=pad.l, xw=W-pad.l-pad.r;
+  items.forEach((d,i)=>{
+    const y=pad.t+i*rowH, bw=Math.abs(d.value)/max*xw;
+    s.appendChild(el("rect",{x:x0,y:y+4,width:bw,height:rowH-11,
+      fill:d.color||"var(--accent)"}));
+    s.appendChild(el("text",{x:x0-7,y:y+rowH/2+3,"text-anchor":"end",
+      class:"axis",style:"font-size:10.5px;fill:var(--ink)"},d.label));
+    s.appendChild(el("text",{x:x0+bw+5,y:y+rowH/2+3,class:"axis"},
+      opt.fmt?opt.fmt(d.value):fmt(d.value,3)));
+  });
+  s.appendChild(el("line",{x1:x0,y1:pad.t,x2:x0,y2:H-pad.b+2,
+    stroke:"var(--rule)","stroke-width":1}));
+  if(opt.xlabel) s.appendChild(el("text",{x:x0,y:H-6,class:"axis"},opt.xlabel));
+  host.appendChild(s);
+}
+
+function groupedBars(host,groups,series,opt={}){
+  host.innerHTML="";
+  const W=420,H=210,pad={l:44,r:12,t:14,b:44};
+  const s=svg(W,H);
+  const max=Math.max(...series.flatMap(x=>x.values),0.001)*1.15;
+  const gw=(W-pad.l-pad.r)/groups.length, bw=gw/(series.length+0.7);
+  for(let t=0;t<=4;t++){
+    const v=max*t/4, y=H-pad.b-(v/max)*(H-pad.t-pad.b);
+    s.appendChild(el("line",{x1:pad.l,y1:y,x2:W-pad.r,y2:y,stroke:"#E3EAE7","stroke-width":1}));
+    s.appendChild(el("text",{x:pad.l-6,y:y+3,"text-anchor":"end",class:"axis"},v.toFixed(2)));
+  }
+  groups.forEach((g,i)=>{
+    series.forEach((se,j)=>{
+      const v=Math.max(0,se.values[i]);
+      const h=(v/max)*(H-pad.t-pad.b);
+      const x=pad.l+i*gw+bw*0.35+j*bw;
+      s.appendChild(el("rect",{x,y:H-pad.b-h,width:bw*0.86,height:h,fill:se.color}));
+      s.appendChild(el("text",{x:x+bw*0.43,y:H-pad.b-h-4,"text-anchor":"middle",
+        class:"axis",style:"font-size:9.5px"},v.toFixed(3)));
+    });
+    s.appendChild(el("text",{x:pad.l+i*gw+gw/2,y:H-pad.b+14,"text-anchor":"middle",
+      class:"axis",style:"font-size:10.5px;fill:var(--ink)"},g));
+  });
+  s.appendChild(el("line",{x1:pad.l,y1:H-pad.b,x2:W-pad.r,y2:H-pad.b,stroke:"var(--rule)"}));
+  if(opt.ylabel) s.appendChild(el("text",{x:4,y:11,class:"axis"},opt.ylabel));
+  host.appendChild(s);
+  if(opt.legend){
+    const d=document.createElement("div"); d.className="legend";
+    d.innerHTML=series.map(se=>`<span><span class="swatch" style="background:${se.color}"></span>${se.name}</span>`).join("");
+    host.appendChild(d);
+  }
+}
+
+function scatter(host,pts,opt={}){
+  host.innerHTML="";
+  const W=420,H=290,pad={l:46,r:14,t:14,b:40};
+  const s=svg(W,H);
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const lo=opt.square?Math.min(x0,y0):x0, hi=opt.square?Math.max(x1,y1):x1;
+  const ylo=opt.square?lo:y0, yhi=opt.square?hi:y1;
+  const sx=v=>pad.l+((v-lo)/((hi-lo)||1))*(W-pad.l-pad.r);
+  const sy=v=>H-pad.b-((v-ylo)/((yhi-ylo)||1))*(H-pad.t-pad.b);
+  for(let t=0;t<=4;t++){
+    const v=ylo+(yhi-ylo)*t/4;
+    s.appendChild(el("line",{x1:pad.l,y1:sy(v),x2:W-pad.r,y2:sy(v),stroke:"#E9EFEC"}));
+    s.appendChild(el("text",{x:pad.l-6,y:sy(v)+3,"text-anchor":"end",class:"axis"},v.toFixed(1)));
+    const u=lo+(hi-lo)*t/4;
+    s.appendChild(el("text",{x:sx(u),y:H-pad.b+14,"text-anchor":"middle",class:"axis"},u.toFixed(1)));
+  }
+  if(opt.square) s.appendChild(el("line",{x1:sx(lo),y1:sy(lo),x2:sx(hi),y2:sy(hi),
+    stroke:"var(--ink3)","stroke-width":1,"stroke-dasharray":"4 3"}));
+  pts.forEach(p=>s.appendChild(el("circle",{cx:sx(p.x),cy:sy(p.y),r:opt.r||1.6,
+    fill:p.c||"var(--cool)","fill-opacity":opt.op||0.42})));
+  if(opt.line) {
+    const d=opt.line.map((p,i)=>`${i?'L':'M'}${sx(p.x)},${sy(p.y)}`).join(" ");
+    s.appendChild(el("path",{d,fill:"none",stroke:"var(--ink)","stroke-width":1.6}));
+  }
+  s.appendChild(el("line",{x1:pad.l,y1:pad.t,x2:pad.l,y2:H-pad.b,stroke:"var(--rule)"}));
+  s.appendChild(el("line",{x1:pad.l,y1:H-pad.b,x2:W-pad.r,y2:H-pad.b,stroke:"var(--rule)"}));
+  if(opt.xlabel)s.appendChild(el("text",{x:W/2,y:H-4,"text-anchor":"middle",class:"axis"},opt.xlabel));
+  if(opt.ylabel)s.appendChild(el("text",{x:11,y:H/2,"text-anchor":"middle",class:"axis",
+    transform:`rotate(-90 11 ${H/2})`},opt.ylabel));
+  host.appendChild(s);
+}
+
+function lineChart(host,series,opt={}){
+  host.innerHTML="";
+  const W=760,H=260,pad={l:52,r:16,t:16,b:40};
+  const s=svg(W,H);
+  const all=series.flatMap(se=>se.pts);
+  const x0=Math.min(...all.map(p=>p.x)),x1=Math.max(...all.map(p=>p.x));
+  const y0=Math.min(...all.map(p=>p.y)),y1=Math.max(...all.map(p=>p.y));
+  const pdY=(y1-y0)*0.12||1;
+  const sx=v=>pad.l+((v-x0)/((x1-x0)||1))*(W-pad.l-pad.r);
+  const sy=v=>H-pad.b-((v-(y0-pdY))/(((y1+pdY)-(y0-pdY))||1))*(H-pad.t-pad.b);
+  for(let t=0;t<=4;t++){
+    const v=(y0-pdY)+((y1+pdY)-(y0-pdY))*t/4;
+    s.appendChild(el("line",{x1:pad.l,y1:sy(v),x2:W-pad.r,y2:sy(v),stroke:"#E9EFEC"}));
+    s.appendChild(el("text",{x:pad.l-7,y:sy(v)+3,"text-anchor":"end",class:"axis"},v.toFixed(1)));
+  }
+  const years=[...new Set(all.map(p=>p.x))].sort((a,b)=>a-b);
+  years.filter((_,i)=>i%Math.ceil(years.length/7)===0).forEach(v=>
+    s.appendChild(el("text",{x:sx(v),y:H-pad.b+15,"text-anchor":"middle",class:"axis"},v)));
+  series.forEach(se=>{
+    const p=se.pts.slice().sort((a,b)=>a.x-b.x);
+    s.appendChild(el("path",{d:p.map((q,i)=>`${i?'L':'M'}${sx(q.x)},${sy(q.y)}`).join(" "),
+      fill:"none",stroke:se.color,"stroke-width":1.7}));
+    p.forEach(q=>s.appendChild(el("circle",{cx:sx(q.x),cy:sy(q.y),r:3,fill:se.color,
+      stroke:"#fff","stroke-width":1})));
+    if(se.fit){
+      s.appendChild(el("line",{x1:sx(se.fit[0].x),y1:sy(se.fit[0].y),
+        x2:sx(se.fit[1].x),y2:sy(se.fit[1].y),stroke:se.color,"stroke-width":1,
+        "stroke-dasharray":"5 3","stroke-opacity":.75}));
+    }
+  });
+  s.appendChild(el("line",{x1:pad.l,y1:pad.t,x2:pad.l,y2:H-pad.b,stroke:"var(--rule)"}));
+  s.appendChild(el("line",{x1:pad.l,y1:H-pad.b,x2:W-pad.r,y2:H-pad.b,stroke:"var(--rule)"}));
+  if(opt.ylabel)s.appendChild(el("text",{x:11,y:H/2,"text-anchor":"middle",class:"axis",
+    transform:`rotate(-90 11 ${H/2})`},opt.ylabel));
+  host.appendChild(s);
+  const d=document.createElement("div");d.className="legend";
+  d.innerHTML=series.map(se=>`<span><span class="swatch" style="background:${se.color}"></span>${se.name}</span>`).join("");
+  host.appendChild(d);
+}
+
+function mapChart(host,pts,opt={}){
+  host.innerHTML="";
+  const W=420,H=330,pad=26;
+  const s=svg(W,H);
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const sc=Math.min((W-2*pad)/((x1-x0)||1),(H-2*pad)/((y1-y0)||1));
+  const ox=(W-(x1-x0)*sc)/2, oy=(H-(y1-y0)*sc)/2;
+  pts.forEach(p=>s.appendChild(el("circle",{
+    cx:ox+(p.x-x0)*sc, cy:H-(oy+(p.y-y0)*sc), r:opt.r||1.7,
+    fill:p.c,"fill-opacity":0.8})));
+  host.appendChild(s);
+  if(opt.scale){
+    const d=document.createElement("div");d.className="legend";
+    d.innerHTML=`<span>${opt.scale[0]}</span>
+      <span style="flex:1;height:9px;background:linear-gradient(90deg,${RAMP.join(",")})"></span>
+      <span>${opt.scale[1]}</span>`;
+    d.style.alignItems="center";
+    host.appendChild(d);
+  }
+}
+
+function table(host,cols,rows){
+  const t=document.createElement("table");
+  t.innerHTML="<thead><tr>"+cols.map(c=>
+    `<th class="${c.num?'num':''}">${c.label}</th>`).join("")+"</tr></thead><tbody>"+
+    rows.map(r=>"<tr>"+cols.map(c=>
+      `<td class="${c.num?'num':''}">${c.render?c.render(r):(r[c.key]??"—")}</td>`).join("")+"</tr>").join("")+
+    "</tbody>";
+  host.innerHTML=""; host.appendChild(t);
+}
+
+/* ═══ APPLICATION ══════════════════════════════════════════════════════ */
+let STATE={raw:null,schema:null,clean:null};
+const MAXROWS=12000;   // browser-side cap; the Python pipeline has no such limit
+
+function setState(msg,sub){$("#state").innerHTML=`<b>${msg}</b>${sub?"<br><span style='color:var(--ink3)'>"+sub+"</span>":""}`;}
+function busy(msg){$("#loadMsg").innerHTML=`<div class="callout" style="margin-top:14px"><span class="spinner"></span>${msg}</div>`;}
+function clearBusy(){$("#loadMsg").innerHTML="";}
+
+/* ── clean & coerce ─────────────────────────────────────────────────── */
+function buildClean(raw,schema){
+  const feats=[...Object.entries(schema.indices).map(([k,v])=>({canon:k,col:v})),
+               ...schema.other.map(c=>({canon:c,col:c}))];
+  let rows=raw.rows.map(r=>{
+    const o={};let bad=false;
+    const t=parseFloat(r[schema.lst]); if(!isFinite(t))bad=true; o.__y=t;
+    for(const f of feats){const v=parseFloat(r[f.col]); o[f.canon]=isFinite(v)?v:NaN;}
+    if(schema.lat)o.__lat=parseFloat(r[schema.lat]);
+    if(schema.lon)o.__lon=parseFloat(r[schema.lon]);
+    return bad?null:o;
+  }).filter(Boolean);
+
+  if(rows.length>MAXROWS){const st=Math.ceil(rows.length/MAXROWS);
+    rows=rows.filter((_,i)=>i%st===0);}
+
+  // Kelvin → Celsius
+  const ys=rows.map(r=>r.__y).sort((a,b)=>a-b);
+  const kelvin=quantile(ys,0.5)>200;
+  if(kelvin)rows.forEach(r=>r.__y-=273.15);
+
+  // integer-scaled indices (NDVI × 10000 etc.)
+  const rescaled={};
+  for(const f of feats){
+    if(["ELEV","SLOPE","LAI"].includes(f.canon))continue;
+    const v=rows.map(r=>r[f.canon]).filter(isFinite);
+    if(!v.length)continue;
+    const amax=Math.max(...v.map(Math.abs));
+    if(amax>10){const k=Math.pow(10,Math.ceil(Math.log10(amax)));
+      rows.forEach(r=>r[f.canon]/=k); rescaled[f.canon]=k;}
+  }
+
+  // median-impute, drop dead columns
+  const keep=[];
+  for(const f of feats){
+    const v=rows.map(r=>r[f.canon]).filter(isFinite);
+    if(v.length<Math.max(20,rows.length*0.5))continue;
+    if(new Set(v).size<=1)continue;
+    const med=quantile(v.slice().sort((a,b)=>a-b),0.5);
+    rows.forEach(r=>{if(!isFinite(r[f.canon]))r[f.canon]=med;});
+    keep.push(f.canon);
+  }
+  // winsorise target
+  const lo=quantile(ys,0.002),hi=quantile(ys,0.998);
+  const adj=kelvin?273.15:0;
+  rows.forEach(r=>r.__y=Math.min(Math.max(r.__y,lo-adj),hi-adj));
+
+  return {rows,feats:keep,kelvin,rescaled,
+          hasCoords:!!(schema.lat&&schema.lon&&rows.every(r=>isFinite(r.__lat)&&isFinite(r.__lon)))};
+}
+
+/* ── calibration strip (signature element) ──────────────────────────── */
+function drawStrip(y){
+  const s=$("#strip"); s.innerHTML="";
+  const srt=y.slice().sort((a,b)=>a-b);
+  const lo=quantile(srt,0.01),hi=quantile(srt,0.99);
+  const N=200,counts=new Array(N).fill(0);
+  y.forEach(v=>{const b=Math.floor((v-lo)/((hi-lo)||1)*(N-1));
+    if(b>=0&&b<N)counts[b]++;});
+  const mx=Math.max(...counts,1);
+  for(let i=0;i<N;i++){
+    const h=6+(counts[i]/mx)*46;
+    s.appendChild(el("rect",{x:i*(1000/N),y:52-h,width:1000/N+0.6,height:h,
+      fill:ramp(i/(N-1))}));
+  }
+  $("#stripN").textContent=`${y.length.toLocaleString()} pixels · ${fmt(lo,1)}–${fmt(hi,1)} °C`;
+  $("#stripTicks").innerHTML=[0,0.25,0.5,0.75,1]
+    .map(q=>`<span>${fmt(quantile(srt,q),1)}°</span>`).join("");
+}
+
+/* ── main analysis ──────────────────────────────────────────────────── */
+async function analyse(){
+  const {schema}=STATE;
+  const C=buildClean(STATE.raw,schema);
+  STATE.clean=C;
+  if(C.feats.length<2||C.rows.length<80){
+    clearBusy();
+    $("#loadMsg").innerHTML=`<div class="callout bad" style="margin-top:14px">
+      Not enough usable data: found <b>${C.feats.length}</b> predictors across
+      <b>${C.rows.length}</b> rows. At least 2 predictors and 80 rows are needed.
+      Check the target column is correct in section 02.</div>`;
+    $("#results").classList.remove("hidden"); renderSchema(C); return;
+  }
+
+  drawStrip(C.rows.map(r=>r.__y));
+  renderSchema(C);
+
+  const X=C.rows.map(r=>C.feats.map(f=>r[f]));
+  const y=C.rows.map(r=>r.__y);
+
+  /* quality */
+  const cols=C.feats.map(f=>C.rows.map(r=>r[f]));
+  const vifs=vif(cols);
+  table($("#vifTable"),
+    [{label:"Predictor",key:"f"},{label:"VIF",num:true,render:r=>fmt(r.v,1)},
+     {label:"",render:r=>r.v>10?'<span class="tag t-warn">inflated</span>'
+        :'<span class="tag t-ok">ok</span>'}],
+    C.feats.map((f,i)=>({f,v:vifs[i]})).sort((a,b)=>b.v-a.v));
+
+  barChart($("#corrChart"),
+    C.feats.map((f,i)=>({f,c:pearson(cols[i],y)}))
+      .sort((a,b)=>Math.abs(b.c)-Math.abs(a.c))
+      .map(d=>({label:d.f,value:d.c,color:d.c>=0?"var(--warm)":"var(--cool)"})),
+    {xlabel:"Pearson r with LST",fmt:v=>fmt(v,2)});
+
+  /* cross-validation */
+  await tick("Fitting gradient-boosted trees under two validation designs…");
+  let groups;
+  if(C.hasCoords){
+    const co=C.rows.map(r=>[r.__lat,r.__lon]);
+    const zc=[zscore(co.map(c=>c[0])),zscore(co.map(c=>c[1]))];
+    groups=Array.from(kmeans(co.map((_,i)=>[zc[0][i],zc[1][i]]),8).labels);
+  } else {
+    const Z=C.feats.map((f,i)=>zscore(cols[i]));
+    groups=Array.from(kmeans(C.rows.map((_,i)=>Z.map(z=>z[i])),8).labels);
+  }
+  const spatial=runCV(X,y,foldsFromGroups(groups,5),{});
+  await tick("Comparing against random folds…");
+  const random=runCV(X,y,randomFolds(y.length,5),{});
+  const optimism=random.R2-spatial.R2;
+
+  const full=fitGBT(X,y,{});
+  const resid=y.map((v,i)=>v-spatial.pred[i]).map(v=>isFinite(v)?v:0);
+  const mi=C.hasCoords?moransI(resid,C.rows.map(r=>[r.__lat,r.__lon])):NaN;
+
+  cards($("#modelCards"),[
+    ["Spatial-blocked R²",fmt(spatial.R2,3),`±${fmt(spatial.foldSD,3)} across folds`],
+    ["RMSE",fmt(spatial.RMSE,2)+" °C","typical error per pixel"],
+    ["MAE",fmt(spatial.MAE,2)+" °C","median-scale error"],
+    ["Optimism",(optimism>=0?"+":"")+fmt(optimism,3),"what random folds would have added"]
+  ]);
+
+  groupedBars($("#cvChart"),["R²"],[
+    {name:"Random k-fold",color:"var(--amber)",values:[random.R2]},
+    {name:"Spatial blocked",color:"var(--cool)",values:[spatial.R2]}],
+    {legend:true,ylabel:"R²"});
+
+  scatter($("#fitChart"),
+    spatial.idx.filter((_,i)=>i%Math.max(1,Math.ceil(spatial.idx.length/1800))===0)
+      .map(i=>({x:spatial.pred[i],y:y[i]})),
+    {square:true,xlabel:"Predicted LST (°C)",ylabel:"Observed LST (°C)"});
+
+  const cls=optimism>0.05?"bad":optimism>0.02?"warn":"";
+  $("#leakNote").innerHTML=`<div class="callout ${cls}">
+    Random folds report <b>R² ${fmt(random.R2,3)}</b>; spatial blocks report
+    <b>R² ${fmt(spatial.R2,3)}</b>. The difference of <b>${fmt(optimism,3)}</b> is
+    apparent skill that came from test pixels sitting next to their training twins.
+    ${isFinite(mi)?`Moran's I of the residuals is <b>${fmt(mi,3)}</b> — ${
+      mi>0.2?"there is spatial structure the predictors cannot explain, which is exactly what random folds leak."
+           :"residuals are spatially unstructured, so the leak here is small."}`:""}
+    Report the spatial figure.</div>`;
+
+  /* drivers */
+  await tick("Measuring predictor importance…");
+  const imp=permImportance(full,X,y,C.feats);
+  barChart($("#impChart"),imp.map(d=>({label:d.name,value:d.importance,
+    color:d.dir==="warming"?"var(--warm)":"var(--cool)"})),
+    {xlabel:"Drop in R² when shuffled",fmt:v=>fmt(v,3)});
+  const lg=document.createElement("div"); lg.className="legend";
+  lg.innerHTML=`<span><span class="swatch" style="background:var(--warm)"></span>Increases LST</span>
+                <span><span class="swatch" style="background:var(--cool)"></span>Decreases LST</span>`;
+  $("#impChart").appendChild(lg);
+
+  const sel=$("#pdpSel");
+  sel.innerHTML=imp.map(d=>`<option value="${C.feats.indexOf(d.name)}">${d.name}</option>`).join("");
+  const drawPDP=()=>{
+    const j=+sel.value;
+    const pd=partialDependence(full,X,j);
+    scatter($("#pdpChart"),[],{xlabel:C.feats[j],ylabel:"Mean predicted LST (°C)",line:pd});
+  };
+  sel.onchange=drawPDP; drawPDP();
+
+  /* space */
+  if(C.hasCoords){
+    const srt=y.slice().sort((a,b)=>a-b);
+    const lo=quantile(srt,0.02),hi=quantile(srt,0.98);
+    const step=Math.max(1,Math.ceil(C.rows.length/2600));
+    mapChart($("#mapChart"),C.rows.filter((_,i)=>i%step===0)
+      .map(r=>({x:r.__lon,y:r.__lat,c:ramp((r.__y-lo)/((hi-lo)||1))})),
+      {scale:[fmt(lo,1)+"°C",fmt(hi,1)+"°C"]});
+    const pal=["#0E5A4E","#C1442E","#2C5F8A","#C98A12","#7A5AA8","#2E7D5B","#B5651D","#4C6A8A"];
+    mapChart($("#blockChart"),C.rows.filter((_,i)=>i%step===0)
+      .map((r,i)=>({x:r.__lon,y:r.__lat,c:pal[groups[i*step]%pal.length]})));
+    $("#s-space").classList.remove("hidden");
+  } else {
+    $("#s-space").classList.add("hidden");
+  }
+
+  /* zones */
+  const Zs=C.feats.map((f,i)=>zscore(cols[i]));
+  const Xz=C.rows.map((_,i)=>Zs.map(z=>z[i]));
+  const k=Math.min(5,Math.max(3,Math.floor(C.rows.length/400)));
+  const km=kmeans(Xz,k);
+  const zrows=[];
+  for(let c=0;c<k;c++){
+    const idx=[...Array(C.rows.length).keys()].filter(i=>km.labels[i]===c);
+    if(!idx.length)continue;
+    const prof=C.feats.map((f,j)=>({f,z:mean(idx.map(i=>Xz[i][j]))}))
+      .sort((a,b)=>Math.abs(b.z)-Math.abs(a.z)).slice(0,2)
+      .map(d=>`${d.z>0?"high":"low"} ${d.f}`).join(" / ");
+    zrows.push({c,lst:mean(idx.map(i=>y[i])),pct:100*idx.length/C.rows.length,sig:prof});
+  }
+  zrows.sort((a,b)=>b.lst-a.lst);
+  const zlo=Math.min(...zrows.map(r=>r.lst)),zhi=Math.max(...zrows.map(r=>r.lst));
+  table($("#lczTable"),
+    [{label:"Cluster",render:r=>`<span class="mono">C${r.c}</span>`},
+     {label:"Signature",key:"sig"},
+     {label:"Mean LST",num:true,render:r=>
+       `<span style="color:${ramp((r.lst-zlo)/((zhi-zlo)||1))};font-weight:600">${fmt(r.lst,1)} °C</span>`},
+     {label:"Share of area",num:true,render:r=>fmt(r.pct,1)+" %"}],
+    zrows);
+
+  clearBusy();
+  setState(`${C.rows.length.toLocaleString()} pixels · ${C.feats.length} predictors`,
+           `Spatial R² ${fmt(spatial.R2,3)}`);
+  $("#results").classList.remove("hidden");
+}
+
+function cards(host,items){
+  host.innerHTML=items.map(([h,v,hint])=>
+    `<div class="card"><h4>${h}</h4><div class="stat">${v}</div>
+     <div class="hint">${hint||""}</div></div>`).join("");
+}
+
+function renderSchema(C){
+  const s=STATE.schema;
+  cards($("#schemaCards"),[
+    ["Target",s.lst||"not found",C.kelvin?"converted from Kelvin":"°C"],
+    ["Predictors",String(C.feats.length),C.feats.slice(0,4).join(", ")+(C.feats.length>4?"…":"")],
+    ["Coordinates",C.hasCoords?"found":"none",C.hasCoords?`${s.lat} / ${s.lon}`:"spatial blocking unavailable"],
+    ["Rows used",C.rows.length.toLocaleString(),
+      STATE.raw.rows.length>C.rows.length?`subsampled from ${STATE.raw.rows.length.toLocaleString()}`:"all rows"]
+  ]);
+  const rows=[];
+  if(s.lst)rows.push({c:s.lst,role:"target",note:C.kelvin?"Kelvin → °C":""});
+  for(const [k,v] of Object.entries(s.indices))
+    rows.push({c:v,role:"predictor · "+k,
+      note:C.rescaled[k]?`rescaled ÷${C.rescaled[k]}`:(C.feats.includes(k)?"":"dropped")});
+  for(const o of s.other)rows.push({c:o,role:"predictor",note:C.feats.includes(o)?"":"dropped"});
+  if(s.lat)rows.push({c:s.lat,role:"latitude",note:""});
+  if(s.lon)rows.push({c:s.lon,role:"longitude",note:""});
+  if(s.year)rows.push({c:s.year,role:"year",note:""});
+  for(const d of s.dropped)rows.push({c:d,role:"ignored",note:"identifier or non-numeric"});
+  table($("#schemaTable"),
+    [{label:"Column",render:r=>`<span class="mono">${r.c}</span>`},
+     {label:"Role",key:"role"},{label:"Note",key:"note"}],rows);
+
+  const opts=STATE.raw.columns.map(c=>
+    `<option value="${c}"${c===s.lst?" selected":""}>${c}</option>`).join("");
+  $("#overrides").innerHTML=
+    `<div><label class="ctl" for="tgtSel">Target column</label>
+       <select id="tgtSel">${opts}</select></div>
+     <div><button class="btn ghost" id="rerun">Re-run analysis</button></div>`;
+  $("#rerun").onclick=()=>{
+    STATE.schema.lst=$("#tgtSel").value;
+    if(STATE.schema.indices){
+      for(const [k,v] of Object.entries(STATE.schema.indices))
+        if(v===STATE.schema.lst) delete STATE.schema.indices[k];
+    }
+    STATE.schema.other=STATE.schema.other.filter(c=>c!==STATE.schema.lst);
+    busy("Re-running with the new target…"); setTimeout(analyse,40);
+  };
+}
+
+/* ── trend handling (year column present) ───────────────────────────── */
+function renderTrend(){
+  const s=STATE.schema,C=STATE.clean;
+  if(!s.year){$("#s-trend").classList.add("hidden");return;}
+  const yr=STATE.raw.rows.map(r=>parseFloat(r[s.year]));
+  const lv=STATE.raw.rows.map(r=>parseFloat(r[s.lst]));
+  const by=new Map();
+  yr.forEach((v,i)=>{if(isFinite(v)&&isFinite(lv[i])){
+    if(!by.has(v))by.set(v,[]); by.get(v).push(lv[i]);}});
+  if(by.size<5){$("#s-trend").classList.add("hidden");return;}
+  const years=[...by.keys()].sort((a,b)=>a-b);
+  let vals=years.map(v=>mean(by.get(v)));
+  if(quantile(vals.slice().sort((a,b)=>a-b),0.5)>200) vals=vals.map(v=>v-273.15);
+  const mk=mannKendall(vals), slope=sensSlope(years,vals);
+  const span=(years[years.length-1]-years[0])/Math.max(1,years.length-1);
+  cards($("#trendCards"),[
+    ["Trend",mk.trend,`Mann–Kendall p = ${fmt(mk.p,4)}`],
+    ["Sen's slope",(slope>=0?"+":"")+fmt(slope*(10/(span||1)),3),"°C per decade"],
+    ["Total change",(slope>=0?"+":"")+fmt(slope*(years.length-1),2)+" °C",
+      `${years[0]}–${years[years.length-1]}`]
+  ]);
+  const fitB=slope,fitA=mean(vals)-slope*mean(years);
+  lineChart($("#trendChart"),[{name:"Mean LST",color:"var(--warm)",
+    pts:years.map((x,i)=>({x,y:vals[i]})),
+    fit:[{x:years[0],y:fitA+fitB*years[0]},
+         {x:years[years.length-1],y:fitA+fitB*years[years.length-1]}]}],
+    {ylabel:"Mean LST (°C)"});
+  $("#s-trend").classList.remove("hidden");
+}
+
+const tick=m=>new Promise(r=>{busy(m);setTimeout(r,25);});
+
+/* ── file handling ──────────────────────────────────────────────────── */
+async function ingest(text,name){
+  busy("Reading file…");
+  try{
+    const raw=parseCSV(text);
+    if(!raw.rows.length)throw new Error("no data rows found");
+    STATE.raw=raw;
+    STATE.schema=detectSchema(raw.columns,raw.rows);
+    if(!STATE.schema.lst){
+      clearBusy();
+      $("#loadMsg").innerHTML=`<div class="callout warn" style="margin-top:14px">
+        Read <b>${raw.rows.length.toLocaleString()}</b> rows, but no temperature
+        column was recognised. Pick the target manually below and re-run.</div>`;
+      STATE.clean=buildClean(raw,{...STATE.schema,lst:raw.columns[0]});
+      renderSchema(STATE.clean); $("#results").classList.remove("hidden"); return;
+    }
+    setState(name,`${raw.rows.length.toLocaleString()} rows · ${raw.columns.length} columns`);
+    await analyse();
+    renderTrend();
+  }catch(e){
+    clearBusy();
+    $("#loadMsg").innerHTML=`<div class="callout bad" style="margin-top:14px">
+      Could not read that file: ${e.message}. Expected a comma- or tab-separated
+      table with a header row.</div>`;
+  }
+}
+
+$("#pick").onclick=()=>$("#file").click();
+$("#file").onchange=e=>{const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader(); r.onload=()=>ingest(r.result,f.name); r.readAsText(f);};
+const drop=$("#drop");
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{
+  e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{
+  e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0]; if(!f)return;
+  const r=new FileReader(); r.onload=()=>ingest(r.result,f.name); r.readAsText(f);});
+
+/* ── demo data: Dhaka-like synthetic pixels ─────────────────────────── */
+$("#demo").onclick=()=>{
+  let seed=2024; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+  const gauss=()=>{let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};
+  const side=62,rows=[];
+  const F=(a,b,ph)=>Math.sin(a*7.1+ph)*Math.cos(b*6.3-ph)+0.5*Math.sin(a*13+b*11);
+  for(let i=0;i<side;i++)for(let j=0;j<side;j++){
+    const lat=23.72+0.11*i/side, lon=90.36+0.11*j/side;
+    const u=F(i/side,j/side,0.7), v=F(i/side,j/side,2.9);
+    const ndvi=Math.max(-0.2,Math.min(0.85,0.34+0.17*v-0.10*u+0.03*gauss()));
+    const ndbi=Math.max(-0.6,Math.min(0.7,0.05+0.16*u+0.03*gauss()));
+    const ndwi=Math.max(-0.7,Math.min(0.6,-0.16-0.09*u+0.04*gauss()));
+    const savi=Math.max(-0.3,Math.min(0.9,ndvi*0.93+0.02*gauss()));
+    const bsi=Math.max(-0.6,Math.min(0.7,0.12+0.12*F(i/side,j/side,1.8)+0.03*gauss()));
+    const alb=Math.max(0.04,Math.min(0.4,0.17+0.02*u+0.012*gauss()));
+    const lst=30.4-9.5*ndvi+7.2*ndbi-3.0*ndwi+4.1*bsi+11*alb-2.4*ndvi*ndbi+1.8*u+0.35*gauss();
+    rows.push([lat.toFixed(6),lon.toFixed(6),ndvi.toFixed(4),ndbi.toFixed(4),
+      ndwi.toFixed(4),savi.toFixed(4),bsi.toFixed(4),alb.toFixed(4),lst.toFixed(3)].join(","));
+  }
+  ingest("latitude,longitude,NDVI,NDBI,NDWI,SAVI,BSI,Albedo,LST\n"+rows.join("\n"),
+         "demo_dhaka_synthetic.csv");
+};
+
+</script>
+</body>
+</html>

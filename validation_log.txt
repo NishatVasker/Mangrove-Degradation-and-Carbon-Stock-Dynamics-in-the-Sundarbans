@@ -1,0 +1,309 @@
+Generating synthetic data...
+Files: ['DNCC_North_All_Combined_Indices.csv', 'DSCC_South_All_Combined_Indices.csv', 'LST_Trend_1990_2025_North_.csv', 'LST_Trend_1990_2025_South_.csv', 'RS_Data.zip']
+==============================================================================
+DHAKA UHI — ADVANCED MACHINE LEARNING PIPELINE
+==============================================================================
+
+>>> INGESTION
+  extracted RS_Data.zip -> /home/claude/test_work/extracted/RS_Data
+  LST_Trend_1990_2025_North_                           6 x 9
+  DSCC_South_All_Combined_Indices                  8,836 x 13
+  DNCC_North_All_Combined_Indices                  8,836 x 13
+  LST_Trend_1990_2025_South_                           8 x 3
+  extra_2020                                       1,444 x 13
+
+>>> SCHEMA — DSCC_South_All_Combined_Indices
+  source        : DSCC_South_All_Combined_Indices
+  rows          : 8,836
+  target (LST)  : LST_Celsius
+  coords        : lat=POINT_Y  lon=POINT_X
+  year          : None
+  zone          : Ward_Name
+  indices (8) : ALBEDO, FVC, MNDWI, NDBI, NDBaI, NDVI, SAVI, UI
+  extra numeric : none
+    cleaning: {"rows_dropped_no_target": 0, "kelvin_to_celsius": true, "rescaled": {"NDVI": 10000.0, "NDBI": 10000.0, "MNDWI": 10000.0, "SAVI": 10000.0, "UI": 10000.0, "NDBaI": 10000.0}, "dropped_degenerate": [], "target_winsorised": 36, "cells_imputed": 0, "final_rows": 8836, "final_features": 8}
+
+==============================================================================
+ZONE: South (DSCC)
+==============================================================================
+
+[1] Multicollinearity screening (VIF)
+    retained 5/8; dropped ['ndvi_mean', 'ndbi_mean', 'veg_fraction']
+
+[2] Spatial cross-validation design
+    scheme: spatial-blocked (k-means on coordinates); 5 folds
+    Moran's I of LST = 0.952  (0 = no spatial structure)
+
+[3] Model benchmark
+    OLS            R2=+0.9786 (fold sd 0.004) RMSE=0.631
+    Ridge          R2=+0.9786 (fold sd 0.004) RMSE=0.631
+    RandomForest   R2=+0.9703 (fold sd 0.004) RMSE=0.743
+    ExtraTrees     R2=+0.9705 (fold sd 0.004) RMSE=0.741
+    XGBoost        R2=+0.9746 (fold sd 0.004) RMSE=0.687
+    LightGBM       R2=+0.9739 (fold sd 0.004) RMSE=0.697
+    HistGBM        R2=+0.9739 (fold sd 0.004) RMSE=0.696
+    MLP            R2=+0.9766 (fold sd 0.004) RMSE=0.659
+    Stacked        R2=+0.9748 (fold sd 0.004) RMSE=0.684
+    best: OLS  R2=0.9786
+
+[4] Leakage audit: random CV vs spatial CV
+    LightGBM: random R2=0.9761  spatial R2=0.9739  optimism=+0.0023
+    Moran's I of residuals = 0.035  (residuals spatially unstructured)
+
+[4b] Geographically weighted regression (spatial non-stationarity)
+    bandwidth=433 neighbours, GWR R2=0.981 vs global OLS R2=0.980
+    AICc gate: dAICc=-4231.0 -> NO evidence of non-stationarity
+    non-stationary drivers: none
+
+[5] SHAP explainability
+    urban_index  36.5%  warming
+    savi_mean   31.7%  cooling
+    bare_soil_index  11.5%  warming
+
+[6] Confidence Gatekeeper
+    coverage 92.2% (target 90%), mean width 2.31°C
+    ACCEPT 53.5% | REVIEW 31.8% | REJECT 14.8%
+
+[7] Local climate zone discovery
+    k=3 (silhouette 0.217); hottest cluster 34.8°C vs coolest 25.7°C
+
+>>> SCHEMA — DNCC_North_All_Combined_Indices
+  source        : DNCC_North_All_Combined_Indices
+  rows          : 8,836
+  target (LST)  : LST
+  coords        : lat=latitude  lon=longitude
+  year          : None
+  zone          : None
+  indices (8) : ALBEDO, BSI, FVC, NDBI, NDVI, NDWI, SAVI, UI
+  extra numeric : none
+    cleaning: {"rows_dropped_no_target": 0, "dropped_degenerate": [], "target_winsorised": 36, "cells_imputed": 0, "final_rows": 8836, "final_features": 8}
+
+==============================================================================
+ZONE: North (DNCC)
+==============================================================================
+
+[1] Multicollinearity screening (VIF)
+    retained 5/8; dropped ['NDVI', 'NDBI', 'FVC']
+
+[2] Spatial cross-validation design
+    scheme: spatial-blocked (k-means on coordinates); 5 folds
+    Moran's I of LST = 0.950  (0 = no spatial structure)
+
+[3] Model benchmark
+    OLS            R2=+0.9758 (fold sd 0.011) RMSE=0.644
+    Ridge          R2=+0.9758 (fold sd 0.011) RMSE=0.644
+    RandomForest   R2=+0.9673 (fold sd 0.012) RMSE=0.748
+    ExtraTrees     R2=+0.9683 (fold sd 0.010) RMSE=0.736
+    XGBoost        R2=+0.9715 (fold sd 0.012) RMSE=0.698
+    LightGBM       R2=+0.9706 (fold sd 0.013) RMSE=0.709
+    HistGBM        R2=+0.9708 (fold sd 0.013) RMSE=0.707
+    MLP            R2=+0.9734 (fold sd 0.011) RMSE=0.674
+    Stacked        R2=+0.9717 (fold sd 0.012) RMSE=0.695
+    best: OLS  R2=0.9758
+
+[4] Leakage audit: random CV vs spatial CV
+    LightGBM: random R2=0.9729  spatial R2=0.9706  optimism=+0.0023
+    Moran's I of residuals = 0.049  (residuals spatially unstructured)
+
+[4b] Geographically weighted regression (spatial non-stationarity)
+    bandwidth=97 neighbours, GWR R2=0.983 vs global OLS R2=0.976
+    AICc gate: dAICc=-4195.8 -> NO evidence of non-stationarity
+    non-stationary drivers: none
+
+[5] SHAP explainability
+    UI          37.7%  warming
+    SAVI        32.0%  cooling
+    BSI         10.6%  warming
+
+[6] Confidence Gatekeeper
+    coverage 91.6% (target 90%), mean width 2.37°C
+    ACCEPT 47.5% | REVIEW 22.9% | REJECT 29.6%
+
+[7] Local climate zone discovery
+    k=3 (silhouette 0.217); hottest cluster 37.3°C vs coolest 29.3°C
+
+>>> SCHEMA — extra_2020
+  source        : extra_2020
+  rows          : 1,444
+  target (LST)  : LST
+  coords        : lat=latitude  lon=longitude
+  year          : None
+  zone          : None
+  indices (8) : ALBEDO, BSI, FVC, NDBI, NDVI, NDWI, SAVI, UI
+  extra numeric : none
+    cleaning: {"rows_dropped_no_target": 0, "dropped_degenerate": [], "target_winsorised": 6, "cells_imputed": 0, "final_rows": 1444, "final_features": 8}
+
+==============================================================================
+ZONE: Unassigned
+==============================================================================
+
+[1] Multicollinearity screening (VIF)
+    retained 5/8; dropped ['NDVI', 'NDBI', 'FVC']
+
+[2] Spatial cross-validation design
+    scheme: spatial-blocked (k-means on coordinates); 5 folds
+    Moran's I of LST = 0.890  (0 = no spatial structure)
+
+[3] Model benchmark
+    OLS            R2=+0.9770 (fold sd 0.007) RMSE=0.634
+    Ridge          R2=+0.9770 (fold sd 0.007) RMSE=0.634
+    RandomForest   R2=+0.9533 (fold sd 0.017) RMSE=0.902
+    ExtraTrees     R2=+0.9532 (fold sd 0.009) RMSE=0.904
+    XGBoost        R2=+0.9638 (fold sd 0.012) RMSE=0.795
+    LightGBM       R2=+0.9610 (fold sd 0.011) RMSE=0.825
+    HistGBM        R2=+0.9606 (fold sd 0.012) RMSE=0.829
+    MLP            R2=+0.9647 (fold sd 0.019) RMSE=0.784
+    Stacked        R2=+0.9632 (fold sd 0.013) RMSE=0.801
+    best: OLS  R2=0.9770
+
+[4] Leakage audit: random CV vs spatial CV
+    LightGBM: random R2=0.9659  spatial R2=0.9610  optimism=+0.0049
+    Moran's I of residuals = 0.039  (residuals spatially unstructured)
+
+[4b] Geographically weighted regression (spatial non-stationarity)
+    bandwidth=1241 neighbours, GWR R2=0.978 vs global OLS R2=0.977
+    AICc gate: dAICc=-4099.1 -> NO evidence of non-stationarity
+    non-stationary drivers: none
+
+[5] SHAP explainability
+    UI          38.2%  warming
+    SAVI        33.3%  cooling
+    NDWI        10.6%  cooling
+
+[6] Confidence Gatekeeper
+    coverage 88.2% (target 90%), mean width 2.16°C
+    ACCEPT 86.5% | REVIEW 10.8% | REJECT 2.7%
+
+[7] Local climate zone discovery
+    k=3 (silhouette 0.218); hottest cluster 36.0°C vs coolest 26.7°C
+
+==============================================================================
+POOLED MODEL (zone as predictor)
+==============================================================================
+  pooled 19,116 rows x 6 shared indices (+coords)
+
+==============================================================================
+ZONE: Pooled (N+S)
+==============================================================================
+
+[1] Multicollinearity screening (VIF)
+    retained 4/7; dropped ['NDVI', 'NDBI', 'FVC']
+
+[2] Spatial cross-validation design
+    scheme: spatial-blocked (k-means on coordinates); 5 folds
+    Moran's I of LST = 0.806  (0 = no spatial structure)
+
+[3] Model benchmark
+    OLS            R2=+0.9539 (fold sd 0.006) RMSE=0.911
+    Ridge          R2=+0.9539 (fold sd 0.006) RMSE=0.911
+    RandomForest   R2=+0.9500 (fold sd 0.005) RMSE=0.948
+    ExtraTrees     R2=+0.9499 (fold sd 0.006) RMSE=0.950
+    XGBoost        R2=+0.9514 (fold sd 0.005) RMSE=0.935
+    LightGBM       R2=+0.9504 (fold sd 0.006) RMSE=0.944
+    HistGBM        R2=+0.9514 (fold sd 0.006) RMSE=0.935
+    MLP            R2=+0.9538 (fold sd 0.005) RMSE=0.912
+    Stacked        R2=+0.9509 (fold sd 0.004) RMSE=0.940
+    best: Ridge  R2=0.9539
+
+[4] Leakage audit: random CV vs spatial CV
+    LightGBM: random R2=0.9538  spatial R2=0.9504  optimism=+0.0034
+    Moran's I of residuals = 0.332  (unexplained spatial structure -> random CV would leak)
+
+[4b] Geographically weighted regression (spatial non-stationarity)
+    GWR failed: LinAlgError: A singular matrix detected: slice(s) [0] are singular.
+
+[5] SHAP explainability
+    UI          46.9%  warming
+    SAVI        38.8%  cooling
+    ALBEDO      12.3%  warming
+
+[6] Confidence Gatekeeper
+    coverage 91.8% (target 90%), mean width 3.29°C
+    ACCEPT 54.6% | REVIEW 26.8% | REJECT 18.7%
+
+[7] Local climate zone discovery
+    k=3 (silhouette 0.315); hottest cluster 33.9°C vs coolest 26.9°C
+
+==============================================================================
+TEMPORAL ANALYSIS
+==============================================================================
+  North (DNCC): increasing, Sen slope +0.802 °C/decade, MK p=0.004434, total +2.81 °C over 1990-2025
+  South (DSCC): increasing, Sen slope +0.537 °C/decade, MK p=0.03545, total +1.88 °C over 1990-2025
+
+  North-South differential drivers (top 3):
+    d_ALBEDO      21.4%
+    d_NDBI        20.9%
+    d_UI          20.1%
+
+==============================================================================
+EXPORT
+==============================================================================
+  report written
+
+Outputs -> /home/claude/test_outputs
+  ANALYSIS_REPORT.md  (23 KB)
+  figures/gatekeeper_North.pdf  (192 KB)
+  figures/gatekeeper_North.png  (422 KB)
+  figures/gatekeeper_Pooled.pdf  (255 KB)
+  figures/gatekeeper_Pooled.png  (472 KB)
+  figures/gatekeeper_South.pdf  (183 KB)
+  figures/gatekeeper_South.png  (418 KB)
+  figures/gatekeeper_Unassigned.pdf  (79 KB)
+  figures/gatekeeper_Unassigned.png  (321 KB)
+  figures/gwr_North.pdf  (592 KB)
+  figures/gwr_North.png  (1057 KB)
+  figures/gwr_South.pdf  (377 KB)
+  figures/gwr_South.png  (956 KB)
+  figures/gwr_Unassigned.pdf  (308 KB)
+  figures/gwr_Unassigned.png  (865 KB)
+  figures/lcz_North.pdf  (22 KB)
+  figures/lcz_North.png  (161 KB)
+  figures/lcz_Pooled.pdf  (22 KB)
+  figures/lcz_Pooled.png  (159 KB)
+  figures/lcz_South.pdf  (21 KB)
+  figures/lcz_South.png  (183 KB)
+  figures/lcz_Unassigned.pdf  (21 KB)
+  figures/lcz_Unassigned.png  (156 KB)
+  figures/leakage_audit.pdf  (26 KB)
+  figures/leakage_audit.png  (255 KB)
+  figures/model_comparison.pdf  (31 KB)
+  figures/model_comparison.png  (444 KB)
+  figures/shap_beeswarm_North.pdf  (211 KB)
+  figures/shap_beeswarm_North.png  (323 KB)
+  figures/shap_beeswarm_Pooled.pdf  (153 KB)
+  figures/shap_beeswarm_Pooled.png  (249 KB)
+  figures/shap_beeswarm_South.pdf  (202 KB)
+  figures/shap_beeswarm_South.png  (338 KB)
+  figures/shap_beeswarm_Unassigned.pdf  (208 KB)
+  figures/shap_beeswarm_Unassigned.png  (321 KB)
+  figures/shap_dependence_North.pdf  (127 KB)
+  figures/shap_dependence_North.png  (241 KB)
+  figures/shap_dependence_Pooled.pdf  (96 KB)
+  figures/shap_dependence_Pooled.png  (225 KB)
+  figures/shap_dependence_South.pdf  (125 KB)
+  figures/shap_dependence_South.png  (238 KB)
+  figures/shap_dependence_Unassigned.pdf  (124 KB)
+  figures/shap_dependence_Unassigned.png  (233 KB)
+  figures/shap_importance.pdf  (24 KB)
+  figures/shap_importance.png  (297 KB)
+  figures/spatial_North.pdf  (1480 KB)
+  figures/spatial_North.png  (2711 KB)
+  figures/spatial_Pooled.pdf  (830 KB)
+  figures/spatial_Pooled.png  (1188 KB)
+  figures/spatial_South.pdf  (1488 KB)
+  figures/spatial_South.png  (2745 KB)
+  figures/spatial_Unassigned.pdf  (330 KB)
+  figures/spatial_Unassigned.png  (779 KB)
+  figures/temporal_trends.pdf  (22 KB)
+  figures/temporal_trends.png  (309 KB)
+  tables/change_detection_drivers.csv  (0 KB)
+  tables/gatekeeper_validation.csv  (1 KB)
+  tables/gwr_nonstationarity.csv  (3 KB)
+  tables/local_climate_zones.csv  (2 KB)
+  tables/local_hotspot_explanations.csv  (9 KB)
+  tables/model_benchmark.csv  (6 KB)
+  tables/shap_feature_importance.csv  (2 KB)
+  tables/shap_interactions.csv  (3 KB)
+  tables/spatial_leakage_audit.csv  (1 KB)
+  tables/temporal_trends.csv  (2 KB)
+  tables/vif_screening.csv  (1 KB)
