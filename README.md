@@ -89,10 +89,6 @@ Docstrings that no longer matched the code (SVR listed but absent, "split confor
 
 ---
 
-## 5. What I still need from you
 
-- **The data.** One CSV on its own first, so we can tell whether the zip is the problem.
-- **Are rows pixel-level or ward-aggregated?** This changes the CV strategy completely — ward data needs grouping by ward, not k-means on centroids.
-- **Are the indices per-year or single-epoch?** If single-epoch, the trend CSVs are your only temporal evidence and the change-detection model is comparing zones rather than times.
 
 One caveat on the sample outputs: panel (b) of the gatekeeper figures shows no separation between Accept/Review/Reject. That's honest — my synthetic data has uniform noise everywhere, so there is genuinely no local difficulty variation to find. The adversarial test proves the gate separates when real variation exists. On your data, expect separation.
